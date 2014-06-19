@@ -1,4 +1,12 @@
 __version__ = 0.1
+DEBUG = True
+
+if DEBUG:
+    APP_DIR = os.path.dirname(os.path.abspath(__file__))
+    DATABASE_URI = 'sqlite:///' + os.path.join(APP_DIR, 'app.db')
+else:
+    DATABASE_URI = ''
+
 
 HOST_SERVER_NAME = 'defestri'
 LOG_DIR = '/var/log/'
