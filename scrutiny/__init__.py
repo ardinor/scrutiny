@@ -199,17 +199,6 @@ def parse():
     print('Inserting results into database...')
     insert_into_db(ip_and_location, breakin_attempt, banned_ip)
 
-    #print('Building output...')
-    #output_parsed_template = template.render(displayed_time=displayed_time,
-    #                                         time_offset=time_offset,
-    #                                         last_month=last_month,
-    #                                         breakin_attempts=breakin_attempt,
-    #                                         bans=banned_ip,
-    #                                         ips=ip_and_location)
-
-    #with codecs.open(os.path.join(DIR, 'index.html'), encoding='utf-8', mode='wb') as f:
-    #    f.write(output_parsed_template)
-
     print('Finished!')
 
 if __name__ == '__main__':
