@@ -43,6 +43,7 @@ class BannedIPs(Base):
 
 
 class BreakinAttempts(Base):
+    __tablename__ = 'breakinattempts'
     id = Column(Integer, autoincrement=True, primary_key=True)
     date = Column(DateTime)
     # Some programs accept only 8 character user names

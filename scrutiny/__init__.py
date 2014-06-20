@@ -10,9 +10,9 @@ from datetime import timedelta, datetime
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from scrutiny.models import IPAddr, BannedIPs, BreakinAttempts
+from scrutiny.models import IPAddr, BannedIPs, BreakinAttempts, Base
 from scrutiny.settings import API_URL, API_KEY, LOG_DIR, SEARCH_STRING, \
-    FAIL2BAN_SEARCH_STRING, ROOT_NOT_ALLOWED_SEARCH_STRING
+    FAIL2BAN_SEARCH_STRING, ROOT_NOT_ALLOWED_SEARCH_STRING, DATABASE_URI
 
 class Scrutiny():
 
@@ -168,7 +168,7 @@ class Scrutiny():
 
         for ip, location in ips.items():
             # Query to see if already exists first
-            ip_addr = self.session.query(IPAddr).filter(IPAddr.ip_addr=ip)
+            ip_addr = self.session.query(IPAddr).filter(IPAddr.ip_addr==ip)
             if ip_addr.count() == 0:
                 ip_addr = IPAddr(ip)
                 if 'region' in location:
@@ -196,9 +196,9 @@ class Scrutiny():
         print('Begin.')
         last_month = datetime.now().replace(day=1) - timedelta(days=1)
         print('Timezone setup...')
-        displayed_time, time_offset, sys_tz = tz_setup()
+        displayed_time, time_offset, sys_tz = self.tz_setup()
         print('Reading logs...')
-        breakin_attempt, banned_ip = read_logs(LOG_DIR)
+        breakin_attempt, banned_ip = self.read_logs(LOG_DIR)
         unique_ips = set()
         for i in breakin_attempt.values():
             unique_ips.add(i[0])
@@ -210,7 +210,7 @@ class Scrutiny():
             time.sleep(2)
 
         print('Inserting results into database...')
-        insert_into_db(ip_and_location, breakin_attempt, banned_ip)
+        self.insert_into_db(ip_and_location, breakin_attempt, banned_ip)
 
         print('Finished!')
 
