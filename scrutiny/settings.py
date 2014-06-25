@@ -12,6 +12,7 @@ else:
 
 HOST_SERVER_NAME = 'defestri'
 LOG_DIR = '/var/log/'
+#LOG_DIR = 'F:/Temp/'
 
 # Search string for the usual invalid user login attempts from /var/log/auth.log
 # Jun 10 12:40:05 defestri sshd[11019]: Invalid user admin from 61.174.51.217

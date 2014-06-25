@@ -146,7 +146,7 @@ class Scrutiny():
                         f = gzip.open(os.path.join(log_dir, i), 'r')
                         file_content = f.read()
                         split_text = file_content.split('\n')
-                        breakin_attempt, banned_ip = parse_content(split_text,
+                        breakin_attempt, banned_ip = self.parse_content(split_text,
                                                                    breakin_attempt,
                                                                    banned_ip,
                                                                    last_month,
@@ -154,7 +154,7 @@ class Scrutiny():
 
                     else:
                         with open(os.path.join(log_dir, i), 'r') as f:
-                            breakin_attempt, banned_ip = parse_content(f,
+                            breakin_attempt, banned_ip = self.parse_content(f,
                                                                        breakin_attempt,
                                                                        banned_ip,
                                                                        last_month,
@@ -178,7 +178,7 @@ class Scrutiny():
                 self.session.commit()
             ip_items[ip] = ip_addr
 
-        for attempt_date, attempt_details in breakin_attempts.items:
+        for attempt_date, attempt_details in breakin_attempts.items():
             new_attempt = BreakinAttempts(date=attempt_date,
                 user=attempt_details[1])
             new_attempt.ipaddr = ip_items[attempt_details[0]]
