@@ -12,7 +12,8 @@ from sqlalchemy.orm import sessionmaker
 
 from scrutiny.models import IPAddr, BannedIPs, BreakinAttempts, Base
 from scrutiny.settings import API_URL, API_KEY, LOG_DIR, SEARCH_STRING, \
-    FAIL2BAN_SEARCH_STRING, ROOT_NOT_ALLOWED_SEARCH_STRING, DATABASE_URI
+    FAIL2BAN_SEARCH_STRING, ROOT_NOT_ALLOWED_SEARCH_STRING, DATABASE_URI, \
+    DEBUG
 
 class Scrutiny():
 
