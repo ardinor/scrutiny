@@ -74,6 +74,10 @@ class Scrutiny():
             url = API_URL + '?' + url_params
             url_obj = urllib.request.urlopen(url)
             response = url_obj.read()
+            try:
+                response = response.decode("utf-8") # response is bytes, parse to string
+            except AttributeError:
+                pass
             url_obj.close()
             response_dict = json.loads(response)
 
