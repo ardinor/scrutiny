@@ -16,7 +16,7 @@ else:
     username = config.get("credentials", "username")
     password = config.get("credentials", "password")
     API_KEY = config.get("credentials", "API_KEY")
-    SQLALCHEMY_DATABASE_URI = "mysql+oursql://" + username + ":" + password + "@localhost/mojibake"
+    DATABASE_URI = "mysql+oursql://" + username + ":" + password + "@localhost/mojibake"
 
 
 HOST_SERVER_NAME = 'defestri'
