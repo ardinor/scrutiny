@@ -199,7 +199,7 @@ class Scrutiny():
                 self.session.commit()
             else:
                 ip_addr = ip_addr.first()
-            ip_items[ip] = ip_addr
+            ip_items[ip] = ip_addr.id
 
         # Need to check if it's already in there...
 
@@ -224,7 +224,11 @@ class Scrutiny():
         print('Timezone setup...')
         displayed_time, time_offset, sys_tz = self.tz_setup()
         print('Reading logs...')
-        breakin_attempt, banned_ip = self.read_logs(LOG_DIR)
+        #breakin_attempt, banned_ip = self.read_logs(LOG_DIR)
+        breakin_attempt = {}
+        breakin_attempt[datetime.now()] = ('124.173.118.167', 'admin')
+        banned_ip = {}
+        banned_ip[datetime.now()] = '124.173.118.167'
         unique_ips = set()
         for i in breakin_attempt.values():
             unique_ips.add(i[0])
