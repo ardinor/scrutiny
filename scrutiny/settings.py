@@ -6,6 +6,7 @@ DEBUG = False
 if DEBUG:
     APP_DIR = os.path.dirname(os.path.abspath(__file__))
     DATABASE_URI = 'sqlite:///' + os.path.join(APP_DIR, 'app.db')
+    API_KEY = ''
 else:
     APP_DIR = os.path.dirname(os.path.abspath(__file__))
     import configparser
@@ -14,6 +15,7 @@ else:
     config.read(credentials_file)
     username = config.get("credentials", "username")
     password = config.get("credentials", "password")
+    API_KEY = config.get("credentials", "API_KEY")
     SQLALCHEMY_DATABASE_URI = "mysql+oursql://" + username + ":" + password + "@localhost/mojibake"
 
 
@@ -32,4 +34,3 @@ ROOT_NOT_ALLOWED_SEARCH_STRING = '(?P<log_date>^.*) {server} sshd.*User (?P<user
 FAIL2BAN_SEARCH_STRING = '(?P<log_date>^.*) fail2ban.actions: WARNING \[ssh] Ban (?P<ip_add>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'
 
 API_URL = 'http://api.ipinfodb.com/v3/ip-city/'
-API_KEY = ''
