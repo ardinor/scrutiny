@@ -142,15 +142,18 @@ class Scrutiny():
                     else:
                         auth_log = False
                     if os.path.splitext(i)[1] == '.gz':
+                        try:
                         # Use zcat?
-                        f = gzip.open(os.path.join(log_dir, i), 'r')
-                        file_content = f.read()
-                        split_text = file_content.split('\n')
-                        breakin_attempt, banned_ip = self.parse_content(split_text,
-                                                                   breakin_attempt,
-                                                                   banned_ip,
-                                                                   last_month,
-                                                                   auth_log)
+                            f = gzip.open(os.path.join(log_dir, i), 'r')
+                            file_content = f.read()
+                            split_text = file_content.split('\n')
+                            breakin_attempt, banned_ip = self.parse_content(split_text,
+                                                                       breakin_attempt,
+                                                                       banned_ip,
+                                                                       last_month,
+                                                                       auth_log)
+                        except Exception as e:
+                            print(e)
 
                     else:
                         with open(os.path.join(log_dir, i), 'r') as f:
@@ -177,6 +180,8 @@ class Scrutiny():
                 self.session.session.add(ip_addr)
                 self.session.commit()
             ip_items[ip] = ip_addr
+
+        # Need to check if it's already in there...
 
         for attempt_date, attempt_details in breakin_attempts.items():
             new_attempt = BreakinAttempts(date=attempt_date,
