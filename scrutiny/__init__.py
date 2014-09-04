@@ -62,23 +62,28 @@ class Scrutiny():
 
     def check_ip_location(self, ip):
 
-        params = {'format': 'json', 'key': API_KEY, 'ip': ip, 'timezone': 'false'}
-        print('Checking IP - {}'.format(ip))
-        url_params = urllib.parse.urlencode(params)
-        url = API_URL + '?' + url_params
-        url_obj = urllib.request.urlopen(url)
-        response = url_obj.read()
-        url_obj.close()
-        response_dict = json.loads(response)
+        if DEBUG:
+            # Do some stuff for testing here
+            return_dict = {}
+            return return_dict
+        else:
+            params = {'format': 'json', 'key': API_KEY, 'ip': ip, 'timezone': 'false'}
+            print('Checking IP - {}'.format(ip))
+            url_params = urllib.parse.urlencode(params)
+            url = API_URL + '?' + url_params
+            url_obj = urllib.request.urlopen(url)
+            response = url_obj.read()
+            url_obj.close()
+            response_dict = json.loads(response)
 
-        return_dict = {}
+            return_dict = {}
 
-        if 'cityName' in response_dict and response_dict['cityName'] != '-':
-            return_dict['region'] = response_dict['cityName'] + ', ' + response_dict['regionName']
-        elif response_dict['regionName'] != '-':
-            return_dict['region'] = response_dict['regionName']
+            if 'cityName' in response_dict and response_dict['cityName'] != '-':
+                return_dict['region'] = response_dict['cityName'] + ', ' + response_dict['regionName']
+            elif response_dict['regionName'] != '-':
+                return_dict['region'] = response_dict['regionName']
 
-        return_dict['county'] = response_dict['countryName']
+            return_dict['county'] = response_dict['countryName']
 
         return return_dict
 
@@ -185,16 +190,12 @@ class Scrutiny():
         # Need to check if it's already in there...
 
         for attempt_date, attempt_details in breakin_attempts.items():
-
-            try:
-                new_attempt = BreakinAttempts(date=attempt_date,
-                    user=attempt_details[1])
-                new_attempt.ipaddr = ip_items[attempt_details[0]]
-                self.session.add(new_attempt)
-                self.session.commit()
-            except Exception as e:
-                print(e)
-                print(attempt_details)
+            # e.g. attempt_details = ('127.0.0.1', 'root')
+            new_attempt = BreakinAttempts(date=attempt_date,
+                user=attempt_details[1])
+            new_attempt.ipaddr = ip_items[attempt_details[0]]
+            self.session.add(new_attempt)
+            self.session.commit()
 
         for banned_date, banned_ip in bans.items():
             new_ban = BannedIPs(date=banned_date)
@@ -216,7 +217,7 @@ class Scrutiny():
         ip_and_location = {}
         print('Checking IP locations...')
         for i in unique_ips:
-            ##ip_and_location[i] = check_ip_location(i)
+            ip_and_location[i] = check_ip_location(i)
             # be a good citizen and only hit the site every two seconds
             time.sleep(2)
 
