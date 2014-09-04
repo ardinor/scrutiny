@@ -85,10 +85,15 @@ class Scrutiny():
 
             if 'cityName' in response_dict and response_dict['cityName'] != '-':
                 return_dict['region'] = response_dict['cityName'] + ', ' + response_dict['regionName']
-            elif response_dict['regionName'] != '-':
+            elif 'regionName' in response_dict and response_dict['regionName'] != '-':
                 return_dict['region'] = response_dict['regionName']
+            else:
+                return_dict['region'] = '-'
 
-            return_dict['county'] = response_dict['countryName']
+            if 'country' in response_dict:
+                return_dict['county'] = response_dict['countryName']
+            else:
+                return_dict['country'] = '-'
 
         return return_dict
 
