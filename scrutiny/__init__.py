@@ -90,7 +90,7 @@ class Scrutiny():
             else:
                 return_dict['region'] = '-'
 
-            if 'country' in response_dict:
+            if 'countryName' in response_dict:
                 return_dict['county'] = response_dict['countryName']
             else:
                 return_dict['country'] = '-'
