@@ -1,13 +1,20 @@
 import os
 
 __version__ = 0.1
-DEBUG = True
+DEBUG = False
 
 if DEBUG:
     APP_DIR = os.path.dirname(os.path.abspath(__file__))
     DATABASE_URI = 'sqlite:///' + os.path.join(APP_DIR, 'app.db')
 else:
-    DATABASE_URI = ''
+    APP_DIR = os.path.dirname(os.path.abspath(__file__))
+    import configparser
+    credentials_file = '/home/mojibake/.mojibake_settings'
+    config = configparser.ConfigParser()
+    config.read(credentials_file)
+    username = config.get("credentials", "username")
+    password = config.get("credentials", "password")
+    SQLALCHEMY_DATABASE_URI = "mysql+oursql://" + username + ":" + password + "@localhost/mojibake"
 
 
 HOST_SERVER_NAME = 'defestri'
