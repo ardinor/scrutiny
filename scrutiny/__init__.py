@@ -197,6 +197,8 @@ class Scrutiny():
                 ip_addr.country = location['country']
                 self.session.add(ip_addr)
                 self.session.commit()
+            else:
+                ip_addr = ip_addr.first()
             ip_items[ip] = ip_addr
 
         # Need to check if it's already in there...
