@@ -142,18 +142,19 @@ class Scrutiny():
                     else:
                         auth_log = False
                     if os.path.splitext(i)[1] == '.gz':
-                        try:
                         # Use zcat?
-                            f = gzip.open(os.path.join(log_dir, i), 'r')
-                            file_content = f.read()
-                            split_text = file_content.split('\n')
-                            breakin_attempt, banned_ip = self.parse_content(split_text,
-                                                                       breakin_attempt,
-                                                                       banned_ip,
-                                                                       last_month,
-                                                                       auth_log)
-                        except Exception as e:
-                            print(e)
+                        f = gzip.open(os.path.join(log_dir, i), 'r')
+                        file_content = f.read()  # comes out as bytes
+                        try:
+                            file_content = file_content.decode("utf-8") # convert to a string
+                        except AttributeError:
+                            pass # wasn't bytes, ignore
+                        split_text = file_content.split('\n')
+                        breakin_attempt, banned_ip = self.parse_content(split_text,
+                                                                   breakin_attempt,
+                                                                   banned_ip,
+                                                                   last_month,
+                                                                   auth_log)
 
                     else:
                         with open(os.path.join(log_dir, i), 'r') as f:
@@ -184,11 +185,16 @@ class Scrutiny():
         # Need to check if it's already in there...
 
         for attempt_date, attempt_details in breakin_attempts.items():
-            new_attempt = BreakinAttempts(date=attempt_date,
-                user=attempt_details[1])
-            new_attempt.ipaddr = ip_items[attempt_details[0]]
-            self.session.add(new_attempt)
-            self.session.commit()
+
+            try:
+                new_attempt = BreakinAttempts(date=attempt_date,
+                    user=attempt_details[1])
+                new_attempt.ipaddr = ip_items[attempt_details[0]]
+                self.session.add(new_attempt)
+                self.session.commit()
+            except Exception as e:
+                print(e)
+                print(attempt_details)
 
         for banned_date, banned_ip in bans.items():
             new_ban = BannedIPs(date=banned_date)
