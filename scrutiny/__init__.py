@@ -217,7 +217,7 @@ class Scrutiny():
         ip_and_location = {}
         print('Checking IP locations...')
         for i in unique_ips:
-            ip_and_location[i] = check_ip_location(i)
+            ip_and_location[i] = self.check_ip_location(i)
             # be a good citizen and only hit the site every two seconds
             time.sleep(2)
 
