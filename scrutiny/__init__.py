@@ -95,6 +95,8 @@ class Scrutiny():
             else:
                 return_dict['country'] = '-'
 
+            print('Location - {} {}'.format(return_dict['region'], return_dict['country']))
+
         return return_dict
 
     def parse_content(self, content, breakin_attempt, banned_ip, last_month, auth_log):
@@ -193,7 +195,7 @@ class Scrutiny():
                 if 'region' in location:
                     ip_addr.region = location['region']
                 ip_addr.country = location['country']
-                self.session.session.add(ip_addr)
+                self.session.add(ip_addr)
                 self.session.commit()
             ip_items[ip] = ip_addr
 
