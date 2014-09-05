@@ -97,6 +97,8 @@ class Scrutiny():
 
             print('Location - {} {}'.format(return_dict['region'], return_dict['country']))
 
+            time.sleep(2)
+
         return return_dict
 
     def parse_content(self, content, breakin_attempt, banned_ip, last_month, auth_log):
@@ -183,18 +185,36 @@ class Scrutiny():
 
         return breakin_attempt, banned_ip
 
+    def create_new_ipaddr(self, ip):
+
+        ip_addr = IPAddr(ip)
+        location = self.check_ip_location(ip)
+        if 'region' in location:
+            ip_addr.region = location['region']
+        if 'country' in location:
+            ip_addr.country = location['country']
+        self.session.add(ip_addr)
+        self.session.commit()
+
+        return ip_addr
+
     def insert_into_db(self, ips, breakin_attempts, bans):
 
         ip_items = {}
 
-        for ip, location in ips.items():
+        #return_dict = self.check_ip_location(i)
+        # {ip: {region: '', country: ''}}
+
+        for ip in ips:
             # Query to see if already exists first
             ip_addr = self.session.query(IPAddr).filter(IPAddr.ip_addr==ip)
             if ip_addr.count() == 0:
                 ip_addr = IPAddr(ip)
+                location = self.check_ip_location(ip)
                 if 'region' in location:
                     ip_addr.region = location['region']
-                ip_addr.country = location['country']
+                if 'country' in location:
+                    ip_addr.country = location['country']
                 self.session.add(ip_addr)
                 self.session.commit()
             else:
@@ -205,17 +225,42 @@ class Scrutiny():
 
         for attempt_date, attempt_details in breakin_attempts.items():
             # e.g. attempt_details = ('127.0.0.1', 'root')
-            new_attempt = BreakinAttempts(date=attempt_date,
-                user=attempt_details[1])
-            new_attempt.ipaddr = ip_items[attempt_details[0]]
-            self.session.add(new_attempt)
-            self.session.commit()
+
+            breakin = self.session.query(BreakinAttempts).filter(BreakinAttempts.date==attempt_date). \
+                filter(BreakinAttempts.user==attempt_details[1])
+            # If it already exists in the db don't add it again
+            if breakin.count() == 0:
+                new_attempt = BreakinAttempts(date=attempt_date,
+                    user=attempt_details[1])
+                new_attempt.ipaddr = ip_items[attempt_details[0]]
+                self.session.add(new_attempt)
+                self.session.commit()
 
         for banned_date, banned_ip in bans.items():
-            new_ban = BannedIPs(date=banned_date)
-            new_ban.ipaddr = ip_items[banned_ip]
-            self.session.add(new_ban)
-            self.session.commit()
+            # In some instances it references a ban that doesn't have the IP
+            # in ip_items?
+            ban = self.session.query(BannedIPs).filter(BannedIPs.date==banned_date). \
+                filter(BannedIPs.ipaddr.ip_addr==banned_ip)
+            # If it already exists in the db don't add it again
+            if ban.count() == 0:
+                new_ban = BannedIPs(date=banned_date)
+                if banned_ip in ip_items:
+                    new_ban.ipaddr = ip_items[banned_ip]
+                else:
+                    # Check ip location and make new IPAddr item here
+                    ip_addr = create_new_ipaddr(banned_ip)
+                    new_ban.ipaddr = ip_addr.id
+                self.session.add(new_ban)
+                self.session.commit()
+
+    def clear_db(self):
+        print('Deleting Break-in attempts....')
+        self.session.query(BreakinAttempts).delete()
+        self.session.commit()
+        print('Deleting Banned IPs....')
+        self.session.query(BannedIPs).delete()
+        self.session.commit()
+        print('Done!')
 
     def parse(self):
 
@@ -232,15 +277,15 @@ class Scrutiny():
         unique_ips = set()
         for i in breakin_attempt.values():
             unique_ips.add(i[0])
-        ip_and_location = {}
-        print('Checking IP locations...')
-        for i in unique_ips:
-            ip_and_location[i] = self.check_ip_location(i)
+        #ip_and_location = {}
+        #print('Checking IP locations...')
+        #for i in unique_ips:
+        #    ip_and_location[i] = self.check_ip_location(i)
             # be a good citizen and only hit the site every two seconds
-            time.sleep(2)
+         #   time.sleep(2)
 
         print('Inserting results into database...')
-        self.insert_into_db(ip_and_location, breakin_attempt, banned_ip)
+        self.insert_into_db(unique_ips, breakin_attempt, banned_ip)
 
         print('Finished!')
 
