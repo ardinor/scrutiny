@@ -248,7 +248,14 @@ class Scrutiny():
             # ban = self.session.query(BannedIPs).filter(BannedIPs.date==banned_date). \
             # join(IPAddr)
             except AttributeError:
-                ban = []
+                # Make a new type of list inheriting from the builtin list
+                # this makes the function below work
+                # This is pretty silly but sometimes doing things the easy way
+                # is for chumps
+                class nList(list):
+                    def count(self):
+                        return len(self)
+                ban = nList()
             # If it already exists in the db don't add it again
             if ban.count() == 0:
                 new_ban = BannedIPs(date=banned_date)
