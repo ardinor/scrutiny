@@ -263,7 +263,7 @@ class Scrutiny():
                     new_ban.ipaddr = ip_items[banned_ip]
                 else:
                     # Check ip location and make new IPAddr item here
-                    ip_addr = create_new_ipaddr(banned_ip)
+                    ip_addr = self.create_new_ipaddr(banned_ip)
                     new_ban.ipaddr = ip_addr.id
                 self.session.add(new_ban)
                 self.session.commit()
