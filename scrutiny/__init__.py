@@ -239,8 +239,16 @@ class Scrutiny():
         for banned_date, banned_ip in bans.items():
             # In some instances it references a ban that doesn't have the IP
             # in ip_items?
-            ban = self.session.query(BannedIPs).filter(BannedIPs.date==banned_date). \
-                filter(BannedIPs.ipaddr.ip_addr==banned_ip)
+            try:
+                ban = self.session.query(BannedIPs).filter(BannedIPs.date==banned_date). \
+                    filter(BannedIPs.ipaddr.ip_addr==banned_ip)
+            # AttributeError: Neither 'InstrumentedAttribute' object nor 'Comparator' object associated with BannedIPs.ipaddr has an attribute 'ip_addr'
+            # Caused by the ban existing but not having an IPAddr associated with it I think
+            # Ugly work around, maybe change the query
+            # ban = self.session.query(BannedIPs).filter(BannedIPs.date==banned_date). \
+            # join(IPAddr)
+            except AttributeError:
+                ban = []
             # If it already exists in the db don't add it again
             if ban.count() == 0:
                 new_ban = BannedIPs(date=banned_date)
