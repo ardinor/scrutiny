@@ -298,6 +298,40 @@ class Scrutiny():
     #     self.session.commit()
     #     print('Done!')
 
+    def convert_ip_string_to_binary(self, ip_addr):
+
+        """
+        Converts an IP address formatted as a string i.e. '74.123.51.130'
+        to its binary representation (formatted as a string) '1001010111101111001110000010'
+        Will I use this?
+        """
+
+        ip_list = ip_addr.split('.')
+        bin_list = []
+        for i in ip_list:
+            bin_list.append("{0:b}".format(int(i)))
+        return ''.join(bin_list)
+
+
+    def compare_ip_strings(self, ip_addr1, ip_addr2):
+        ip_list1 = ip_addr1.split('.')
+        ip_list2 = ip_addr2.split('.')
+        for index, i in enumerate(ip_list1):
+            if int(i) != int(ip_list2[index]):
+                if index == 1:
+                    '/8 is different'
+                    return 8
+                elif index == 2:
+                    '/16 is different'
+                    return 16
+                elif index == 3:
+                    '/24 is different'
+                    return 24
+                else:
+                    'The first octet is different, completely different addresses'
+                    return 0
+
+
     def calculate_common_ips(self):
         common_ips = self.session.query(IPAddr).join(BreakinAttempts). \
             group_by(IPAddr.ip_addr).having(func.count(IPAddr.breakins)>=3).all()
