@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
-import unittest
 from datetime import timedelta, datetime
 
-from scrutiny import Scrutiny
 from scrutiny.models import IPAddr, BannedIPs, BreakinAttempts
 
 def populate_test_data(session):
@@ -72,15 +70,3 @@ def populate_test_tz_data():
         time_offset = '+{}'.format(time_offset)
 
     return displayed_time, time_offset, None
-
-class TestCase(unittest.TestCase):
-
-    def setUp(self):
-        s = Scrutiny()
-        # create dbs
-
-    def tearDown(self):
-        # drop tables
-
-    def testIPAddr(self):
-

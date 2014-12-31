@@ -1,7 +1,7 @@
 import os
 
 __version__ = 0.1
-DEBUG = False
+DEBUG = True
 
 if DEBUG:
     APP_DIR = os.path.dirname(os.path.abspath(__file__))
