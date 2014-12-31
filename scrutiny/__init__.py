@@ -14,6 +14,7 @@ from scrutiny.models import IPAddr, BannedIPs, BreakinAttempts, Base
 from scrutiny.settings import API_URL, API_KEY, LOG_DIR, SEARCH_STRING, \
     FAIL2BAN_SEARCH_STRING, ROOT_NOT_ALLOWED_SEARCH_STRING, DATABASE_URI, \
     DEBUG
+from scrutiny.tests import populate_test_data, populate_test_tz_data
 
 class Scrutiny():
 
@@ -22,8 +23,10 @@ class Scrutiny():
         self.Session = self.get_session(Base, self.engine)
         self.session = self.Session()
 
+
     def get_engine(self):
         return create_engine(DATABASE_URI)
+
 
     def get_session(self, base, engine):
         Session = sessionmaker()
@@ -31,6 +34,7 @@ class Scrutiny():
         base.metadata.create_all(engine)
 
         return Session
+
 
     def tz_setup(self):
         if time.localtime().tm_isdst:
@@ -58,8 +62,8 @@ class Scrutiny():
         else:
             sys_tz = None
 
-
         return displayed_time, time_offset, sys_tz
+
 
     def check_ip_location(self, ip):
 
@@ -100,6 +104,7 @@ class Scrutiny():
             time.sleep(2)
 
         return return_dict
+
 
     def parse_content(self, content, breakin_attempt, banned_ip, last_month, auth_log):
 
@@ -143,6 +148,7 @@ class Scrutiny():
 
         return breakin_attempt, banned_ip
 
+
     def read_logs(self, log_dir):
 
         banned_ip = {}
@@ -185,6 +191,7 @@ class Scrutiny():
 
         return breakin_attempt, banned_ip
 
+
     def create_new_ipaddr(self, ip):
 
         ip_addr = IPAddr(ip)
@@ -197,6 +204,7 @@ class Scrutiny():
         self.session.commit()
 
         return ip_addr
+
 
     def insert_into_db(self, ips, breakin_attempts, bans):
 
@@ -268,6 +276,7 @@ class Scrutiny():
                 self.session.add(new_ban)
                 self.session.commit()
 
+
     def clear_db(self):
         print('Deleting Break-in attempts....')
         self.session.query(BreakinAttempts).delete()
@@ -276,6 +285,7 @@ class Scrutiny():
         self.session.query(BannedIPs).delete()
         self.session.commit()
         print('Done!')
+
 
     def parse(self):
 
@@ -303,4 +313,14 @@ class Scrutiny():
         self.insert_into_db(unique_ips, breakin_attempt, banned_ip)
 
         print('Finished!')
+
+
+    def perform_tests(self):
+
+        print('Begin tests.')
+        last_month = datetime.now().replace(day=1) - timedelta(days=1)
+        #print('Timezone setup...')
+        #displayed_time, time_offset, sys_tz = self.tz_setup()
+        populate_test_data(self.session)
+
 
