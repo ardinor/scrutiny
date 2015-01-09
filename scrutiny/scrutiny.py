@@ -357,6 +357,60 @@ class Scrutiny():
         return split_ip_24[::-1]
 
 
+    def calculate_network_details(self, network_prefix, ip_list, sixteen=False, twentyfour=False):
+
+        if sixteen is False and twentyfour is False:
+            raise Exception("Either sixteen or twentyfour needs to be True")
+
+        ip_range = []
+        for ip in ip_list:
+            if sixteen:
+                split_ip = ip.split('.')
+                ip_range += split_ip[2]  # get the third item
+            elif twentyfour:
+                split_ip = ip.split('.')
+                ip_range += split_ip[3]  # get the third item
+
+        # Find the difference between the highest and lowest IPs seen
+        ip_range_diff = max(ip_range) - min(ip_range)
+        # Find the nearest power of 2 (credit to http://mccormick.cx/news/entries/nearest-power-of-two)
+        subnet_range = pow(2, int(log(ip_range_diff, 2) + 0.5))
+        # Calculate the net mask, it'll be 256 - the subnet range (e.g. 256 - 64 = 192)
+        if sixteen:
+            netmask = '255.255.{}.0'.format(256 - subnet_range)
+        elif twentyfour:
+            netmask = '255.255.255.{}'.format(256 - subnet_range)
+
+        # Calculate the CIDR notation
+        cidr = 8 - int(log(ip_range_diff, 2) + 0.5)
+        if sixteen:
+            cidr = '/{}'.format(16 + cidr)
+        elif twentyfour:
+            cidr = '/{}'.format(24 + cidr)
+
+        # Calculate the number of hosts
+        no_hosts = pow(2, 8 - cidr) - 2
+
+        # Next work out the subnet id
+        range_step = 0
+        while range_step < 256:
+            next_step = range_step + subnet_range
+            if range_step < min(ip_range) < next_step:
+                break
+            range_step = next_step
+        subnet_id = '{}.{}'.format(network_prefix, range_step)
+        if sixteen:
+            subnet_id + '.0'
+
+        # Create a new subnet detail object and populate it with our details
+        subnet = SubnetDetails(subnet_id)
+        subnet.cidr = cidr
+        subnet.netmask = netmask
+        subnet.number_hosts = no_hosts
+
+        return subnet
+
+
     def calculate_common_subnets(self):
         common_ips = self.session.query(IPAddr).join(BreakinAttempts). \
             group_by(IPAddr.ip_addr).having(func.count(IPAddr.breakins)>=3).all()
@@ -386,38 +440,12 @@ class Scrutiny():
 
         for network_prefix, ip_list in subnet24.items():
             if len(ip_list) >= 2:
-                ip_range = []
-                for ip in ip_list:
-                    reverse_ip = ip[::-1]
-                    split_ip_24 = reverse_ip[:reverse_ip.find('.')]
-                    split_ip_24 = int(split_ip_24[::-1])
-                    ip_range += [split_ip_24]
-                # Find the difference between the highest and lowest IPs seen
-                ip_range_diff = max(ip_range) - min(ip_range)
-                # Find the nearest power of 2 (credit to http://mccormick.cx/news/entries/nearest-power-of-two)
-                subnet_range = pow(2, int(log(ip_range_diff, 2) + 0.5))
-                # Calculate the net mask, it'll be 256 - the subnet range (e.g. 256 - 64 = 192)
-                netmask = '255.255.255.{}'.format(256 - subnet_range)
-                # Calculate the CIDR notation
-                cidr = 8 - int(log(ip_range_diff, 2) + 0.5)
-                cidr = '/{}'.format(24 + cidr)
-                # Calculate the number of hosts
-                no_hosts = pow(2, 8 - cidr) - 2
+                subnet = self.calculate_network_details(network_prefix, ip_list, twentyfour=True)
+                subnets += [subnet]
 
-                # Next work out the subnet id
-                range_step = 0
-                while range_step < 256:
-                    next_step = range_step + subnet_range
-                    if range_step < min(ip_range) < next_step:
-                        break
-                    range_step = next_step
-                subnet_id = '{}.{}'.format(network_prefix, range_step)
-
-                # Create a new subnet detail ubject and populate it with our details
-                subnet = SubnetDetails(subnet_id)
-                subnet.cidr = cidr
-                subnet.netmask = netmask
-                subnet.number_hosts = no_hosts
+        for network_prefix, ip_list in subnet16.items():
+            if len(ip_list) >= 2:
+                subnet = self.calculate_network_details(network_prefix, ip_list, sixteen=True)
                 subnets += [subnet]
 
 

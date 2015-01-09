@@ -18,6 +18,8 @@ def populate_test_data(session):
         '74.123.51.139': ['Ljubljana', 'Slovenia'],
         '74.123.51.240': ['Ljubljana', 'Slovenia'],
         '74.123.51.251': ['Ljubljana', 'Slovenia'],
+        '69.11.0.0': ['Vienna', 'Austria'],
+        '69.11.123.41': ['Vienna', 'Austria'],
     }
 
     sample_attempts = {
@@ -31,6 +33,8 @@ def populate_test_data(session):
         '74.123.51.139': ['abebrabr', 'abebrabr', 'aberbaerb'],
         '74.123.51.240': ['abebrabr', 'abebrabr', 'aberbaerb'],
         '74.123.51.251': ['abebrabr', 'abebrabr', 'aberbaerb'],
+        '69.11.0.0': ['abebrabr', 'abebrabr', 'aberbaerb'],
+        '69.11.0.0': ['abebrabr', 'abebrabr', 'aberbaerb'],
     }
 
     sample_bans = [
