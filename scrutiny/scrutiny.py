@@ -9,12 +9,26 @@ import pytz
 from datetime import timedelta, datetime
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
+from math import log
 
 from scrutiny.models import IPAddr, BannedIPs, BreakinAttempts, Base
 from scrutiny.settings import API_URL, API_KEY, LOG_DIR, SEARCH_STRING, \
     FAIL2BAN_SEARCH_STRING, ROOT_NOT_ALLOWED_SEARCH_STRING, DATABASE_URI, \
     DEBUG
 from scrutiny.tests import populate_test_data, populate_test_tz_data
+
+
+class SubnetDetails():
+
+    def __init__(self, subnet_id):
+        self.subnet_id = subnet_id
+        self.cidr = None
+        self.netmask = None
+        self.number_hosts = None
+
+    def __repr__(self):
+        return '<SubNet:{}>'.format(self.subnet_id)
+
 
 class Scrutiny():
 
@@ -332,9 +346,80 @@ class Scrutiny():
                     return 0
 
 
-    def calculate_common_ips(self):
+    def get_first_16_bits(self, ip_addr):
+        split_ip = ip_addr.split('.')
+        return split_ip[0] + '.' + split_ip[1]
+
+
+    def get_first_24_bits(self, ip_addr):
+        reverse_ip = ip_addr[::-1]
+        split_ip_24 = reverse_ip[reverse_ip.find('.')+1:]
+        return split_ip_24[::-1]
+
+
+    def calculate_common_subnets(self):
         common_ips = self.session.query(IPAddr).join(BreakinAttempts). \
             group_by(IPAddr.ip_addr).having(func.count(IPAddr.breakins)>=3).all()
+
+        subnet24 = {}
+        subnet16 = {}
+
+        for index, i in enumerate(common_ips):
+            # Compare the item against all the other items in the list
+            for index2, k in enumerate(common_ips):
+                if index != index2:  # don't compare the same address
+                    result = self.compare_ip_strings(i.ip_addr, k.ip_addr)
+                    if result == 16:
+                        if self.get_first_16_bits(i.ip_addr) not in subnet16.keys():
+                            subnet16[self.get_first_16_bits(i.ip_addr)] = [i.ip_addr]
+                        else:
+                            subnet16[self.get_first_16_bits(i.ip_addr)] += [i.ip_addr]
+                        break
+                    elif result == 24:
+                        if self.get_first_24_bits(i.ip_addr) not in subnet24.keys():
+                            subnet24[self.get_first_24_bits(i.ip_addr)] = [i.ip_addr]
+                        else:
+                            subnet24[self.get_first_24_bits(i.ip_addr)] += [i.ip_addr]
+                        break
+
+        subnets = []
+
+        for network_prefix, ip_list in subnet24.items():
+            if len(ip_list) >= 2:
+                ip_range = []
+                for ip in ip_list:
+                    reverse_ip = ip[::-1]
+                    split_ip_24 = reverse_ip[:reverse_ip.find('.')]
+                    split_ip_24 = int(split_ip_24[::-1])
+                    ip_range += [split_ip_24]
+                # Find the difference between the highest and lowest IPs seen
+                ip_range_diff = max(ip_range) - min(ip_range)
+                # Find the nearest power of 2 (credit to http://mccormick.cx/news/entries/nearest-power-of-two)
+                subnet_range = pow(2, int(log(ip_range_diff, 2) + 0.5))
+                # Calculate the net mask, it'll be 256 - the subnet range (e.g. 256 - 64 = 192)
+                netmask = '255.255.255.{}'.format(256 - subnet_range)
+                # Calculate the CIDR notation
+                cidr = 8 - int(log(ip_range_diff, 2) + 0.5)
+                cidr = '/{}'.format(24 + cidr)
+                # Calculate the number of hosts
+                no_hosts = pow(2, 8 - cidr) - 2
+
+                # Next work out the subnet id
+                range_step = 0
+                while range_step < 256:
+                    next_step = range_step + subnet_range
+                    if range_step < min(ip_range) < next_step:
+                        break
+                    range_step = next_step
+                subnet_id = '{}.{}'.format(network_prefix, range_step)
+
+                # Create a new subnet detail ubject and populate it with our details
+                subnet = SubnetDetails(subnet_id)
+                subnet.cidr = cidr
+                subnet.netmask = netmask
+                subnet.number_hosts = no_hosts
+                subnets += [subnet]
+
 
 
 
