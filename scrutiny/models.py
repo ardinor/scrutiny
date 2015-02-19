@@ -6,6 +6,7 @@ Base = declarative_base()
 
 
 class IPAddr(Base):
+
     __tablename__ = 'ipaddr'
     id = Column(Integer, autoincrement=True, primary_key=True)
     ip_addr = Column(String(45), unique=True)
@@ -14,6 +15,7 @@ class IPAddr(Base):
     country = Column(String(255))
     bans = relationship('BannedIPs', backref='ip', lazy='dynamic')
     breakins = relationship('BreakinAttempts', backref='ip', lazy='dynamic')
+    subnet_id = Column(Integer, ForeignKey('subnetdetails.id'))
 
     def __init__(self, ip_addr):
         self.ip_addr = ip_addr
@@ -33,6 +35,7 @@ class IPAddr(Base):
 
 
 class BannedIPs(Base):
+
     __tablename__ = 'bannedips'
     id = Column(Integer, autoincrement=True, primary_key=True)
     date = Column(DateTime)
@@ -43,6 +46,7 @@ class BannedIPs(Base):
 
 
 class BreakinAttempts(Base):
+
     __tablename__ = 'breakinattempts'
     id = Column(Integer, autoincrement=True, primary_key=True)
     date = Column(DateTime)
@@ -54,3 +58,20 @@ class BreakinAttempts(Base):
 
     def __repr__(self):
         return '<BreakinAttempt: {} on {}>'.format(self.user, self.date.strftime('%d-%m-%Y %H:%M:%S'))
+
+
+class SubnetDetails(Base):
+
+    __tablename__ = 'subnetdetails'
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    subnet_id = Column()
+    cidr = Column()
+    netmask = Column()
+    number_hosts = Column()
+    ipaddr = relationship('IPAddr', backref='subnetdetails')
+
+    def __init__(self, subnet_id):
+        self.subnet_id = subnet_id
+
+    def __repr__(self):
+        return '<Subnet:{}>'.format(self.subnet_id)

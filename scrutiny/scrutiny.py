@@ -11,23 +11,24 @@ from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
 from math import log
 
-from scrutiny.models import IPAddr, BannedIPs, BreakinAttempts, Base
+from scrutiny.models import IPAddr, BannedIPs, BreakinAttempts, Base, \
+    SubnetDetails
 from scrutiny.settings import API_URL, API_KEY, LOG_DIR, SEARCH_STRING, \
     FAIL2BAN_SEARCH_STRING, ROOT_NOT_ALLOWED_SEARCH_STRING, DATABASE_URI, \
     DEBUG
 from scrutiny.tests import populate_test_data, populate_test_tz_data
 
 
-class SubnetDetails():
+# class SubnetDetails():
 
-    def __init__(self, subnet_id):
-        self.subnet_id = subnet_id
-        self.cidr = None
-        self.netmask = None
-        self.number_hosts = None
+#     def __init__(self, subnet_id):
+#         self.subnet_id = subnet_id
+#         self.cidr = None
+#         self.netmask = None
+#         self.number_hosts = None
 
-    def __repr__(self):
-        return '<SubNet:{}>'.format(self.subnet_id)
+#     def __repr__(self):
+#         return '<SubNet:{}>'.format(self.subnet_id)
 
 
 class Scrutiny():
@@ -403,10 +404,13 @@ class Scrutiny():
             subnet_id + '.0'
 
         # Create a new subnet detail object and populate it with our details
+        # TODO: Check if it already exists first
         subnet = SubnetDetails(subnet_id)
         subnet.cidr = cidr
         subnet.netmask = netmask
         subnet.number_hosts = no_hosts
+        self.session.add(subnet)
+        self.session.commit()
 
         return subnet
 
@@ -418,35 +422,41 @@ class Scrutiny():
         subnet24 = {}
         subnet16 = {}
 
-        for index, i in enumerate(common_ips):
+        for index, ip in enumerate(common_ips):
             # Compare the item against all the other items in the list
-            for index2, k in enumerate(common_ips):
+            for index2, comparison_ip in enumerate(common_ips):
                 if index != index2:  # don't compare the same address
-                    result = self.compare_ip_strings(i.ip_addr, k.ip_addr)
+                    result = self.compare_ip_strings(ip.ip_addr, comparison_ip.ip_addr)
                     if result == 16:
-                        if self.get_first_16_bits(i.ip_addr) not in subnet16.keys():
-                            subnet16[self.get_first_16_bits(i.ip_addr)] = [i.ip_addr]
+                        if self.get_first_16_bits(ip.ip_addr) not in subnet16.keys():
+                            subnet16[self.get_first_16_bits(ip.ip_addr)] = [ip.ip_addr]
                         else:
-                            subnet16[self.get_first_16_bits(i.ip_addr)] += [i.ip_addr]
+                            subnet16[self.get_first_16_bits(ip.ip_addr)] += [ip.ip_addr]
                         break
                     elif result == 24:
-                        if self.get_first_24_bits(i.ip_addr) not in subnet24.keys():
-                            subnet24[self.get_first_24_bits(i.ip_addr)] = [i.ip_addr]
+                        if self.get_first_24_bits(ip.ip_addr) not in subnet24.keys():
+                            subnet24[self.get_first_24_bits(ip.ip_addr)] = [ip.ip_addr]
                         else:
-                            subnet24[self.get_first_24_bits(i.ip_addr)] += [i.ip_addr]
+                            subnet24[self.get_first_24_bits(ip.ip_addr)] += [ip.ip_addr]
                         break
 
-        subnets = []
+        #subnets = []
 
         for network_prefix, ip_list in subnet24.items():
             if len(ip_list) >= 2:
                 subnet = self.calculate_network_details(network_prefix, ip_list, twentyfour=True)
-                subnets += [subnet]
+                for ip in ip_list:
+                    ip.subnet_id = subnet.id
+                    self.session.add(ip)
+                    self.session.commit()
 
         for network_prefix, ip_list in subnet16.items():
             if len(ip_list) >= 2:
                 subnet = self.calculate_network_details(network_prefix, ip_list, sixteen=True)
-                subnets += [subnet]
+                for ip in ip_list:
+                    ip.subnet_id = subnet.id
+                    self.session.add(ip)
+                    self.session.commit()
 
 
 
