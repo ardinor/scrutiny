@@ -370,7 +370,10 @@ class Scrutiny():
         cidr = 8 - int(log(ip_range_diff, 2) + 0.5)
 
         # Calculate the number of hosts
-        no_hosts = pow(2, 8 - cidr) - 2
+        if sixteen:
+            no_hosts = pow(2, 16 - cidr) - 2
+        else:
+            no_hosts = pow(2, 8 - cidr) - 2
 
         # Format the CIDR to a string '/xx'
         if sixteen:
@@ -382,7 +385,7 @@ class Scrutiny():
         range_step = 0
         while range_step < 256:
             next_step = range_step + subnet_range
-            if range_step < min(ip_range) < next_step:
+            if range_step <= min(ip_range) < next_step:
                 break
             range_step = next_step
         subnet_id = '{}.{}'.format(network_prefix, range_step)
