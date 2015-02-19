@@ -101,10 +101,10 @@ class SubnetDetails(Base):
 
     __tablename__ = 'subnetdetails'
     id = Column(Integer, autoincrement=True, primary_key=True)
-    subnet_id = Column()
-    cidr = Column()
-    netmask = Column()
-    number_hosts = Column()
+    subnet_id = Column(String(15))
+    cidr = Column(String(3))
+    netmask = Column(String(15))
+    number_hosts = Column(Integer)
     ipaddr = relationship('IPAddr', backref='subnetdetails')
 
     def __init__(self, subnet_id):

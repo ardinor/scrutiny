@@ -27,8 +27,7 @@ class Scrutiny():
     def __init__(self):
         self.engine = self.get_engine()
         self.base = Base
-        self.Session = self.get_session(Base, self.engine)
-        self.session = self.Session()
+        self.session = self.get_session(Base, self.engine)
 
         self.logger = logging.getLogger('scrutiny')
         formatter = logging.Formatter('%(asctime)s [%(levelname)s] - %(message)s')
@@ -40,7 +39,7 @@ class Scrutiny():
         else:
             stream_handler.setLevel(logging.INFO)
             self.logger.setLevel(logging.INFO)
-        self.logger.addHandler(consoleHandler)
+        self.logger.addHandler(stream_handler)
 
 
     def get_engine(self):
@@ -52,7 +51,7 @@ class Scrutiny():
         Session.configure(bind=engine)
         base.metadata.create_all(engine)
 
-        return Session
+        return Session()
 
 
     def create_db(self):
@@ -60,10 +59,7 @@ class Scrutiny():
 
 
     def delete_db(self):
-        self.session.query(IPAddr).delete()
-        self.session.query(BreakinAttempts).delete()
-        self.session.query(BannedIPs).delete()
-        self.session.commit()
+        self.base.metadata.drop_all(self.engine)
 
 
     def tz_setup(self):
