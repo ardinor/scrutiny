@@ -243,19 +243,10 @@ class Scrutiny():
             # Query to see if already exists first
             ip_addr = self.session.query(IPAddr).filter(IPAddr.ip_addr==ip)
             if ip_addr.count() == 0:
-                ip_addr = IPAddr(ip)
-                location = self.check_ip_location(ip)
-                if 'region' in location:
-                    ip_addr.region = location['region']
-                if 'country' in location:
-                    ip_addr.country = location['country']
-                self.session.add(ip_addr)
-                self.session.commit()
+                self.create_new_ipaddr(ip)
             else:
                 ip_addr = ip_addr.first()
             ip_items[ip] = ip_addr.id
-
-        # Need to check if it's already in there...
 
         for attempt_date, attempt_details in breakin_attempts.items():
             # e.g. attempt_details = ('127.0.0.1', 'root')
@@ -302,15 +293,6 @@ class Scrutiny():
                 self.session.add(new_ban)
                 self.session.commit()
 
-
-    # def clear_db(self):
-    #     print('Deleting Break-in attempts....')
-    #     self.session.query(BreakinAttempts).delete()
-    #     self.session.commit()
-    #     print('Deleting Banned IPs....')
-    #     self.session.query(BannedIPs).delete()
-    #     self.session.commit()
-    #     print('Done!')
 
     def convert_ip_string_to_binary(self, ip_addr):
 
@@ -365,11 +347,14 @@ class Scrutiny():
         ip_range = []
         for ip in ip_list:
             if sixteen:
+                self.logger.debug(ip)
                 split_ip = ip.split('.')
-                ip_range += split_ip[2]  # get the third item
+                ip_range += [int(split_ip[2])] # get the third item
             elif twentyfour:
                 split_ip = ip.split('.')
-                ip_range += split_ip[3]  # get the third item
+                ip_range += [int(split_ip[3])]  # get the third item
+        if sixteen:
+            self.logger.debug(ip_range)
 
         # Find the difference between the highest and lowest IPs seen
         ip_range_diff = max(ip_range) - min(ip_range)
@@ -383,13 +368,15 @@ class Scrutiny():
 
         # Calculate the CIDR notation
         cidr = 8 - int(log(ip_range_diff, 2) + 0.5)
+
+        # Calculate the number of hosts
+        no_hosts = pow(2, 8 - cidr) - 2
+
+        # Format the CIDR to a string '/xx'
         if sixteen:
             cidr = '/{}'.format(16 + cidr)
         elif twentyfour:
             cidr = '/{}'.format(24 + cidr)
-
-        # Calculate the number of hosts
-        no_hosts = pow(2, 8 - cidr) - 2
 
         # Next work out the subnet id
         range_step = 0
@@ -400,21 +387,27 @@ class Scrutiny():
             range_step = next_step
         subnet_id = '{}.{}'.format(network_prefix, range_step)
         if sixteen:
-            subnet_id + '.0'
+            subnet_id = subnet_id + '.0'
 
         # Create a new subnet detail object and populate it with our details
-        # TODO: Check if it already exists first
-        subnet = SubnetDetails(subnet_id)
-        subnet.cidr = cidr
-        subnet.netmask = netmask
-        subnet.number_hosts = no_hosts
-        self.session.add(subnet)
-        self.session.commit()
+        # Check if it already exists first though
+        subnet = self.session.query(SubnetDetails). \
+                                    filter(SubnetDetails.subnet_id==subnet_id)
+        if subnet.count() == 0:
+            subnet = SubnetDetails(subnet_id)
+            subnet.cidr = cidr
+            subnet.netmask = netmask
+            subnet.number_hosts = no_hosts
+            self.session.add(subnet)
+            self.session.commit()
+        else:
+            subnet = subnet.first()
 
         return subnet
 
 
     def calculate_common_subnets(self):
+        self.logger.debug('Begin calculating subnets...')
         common_ips = self.session.query(IPAddr).join(BreakinAttempts). \
             group_by(IPAddr.ip_addr).having(func.count(IPAddr.breakins)>=3).all()
 
@@ -431,48 +424,40 @@ class Scrutiny():
                             subnet16[self.get_first_16_bits(ip.ip_addr)] = [ip.ip_addr]
                         else:
                             subnet16[self.get_first_16_bits(ip.ip_addr)] += [ip.ip_addr]
-                        break
                     elif result == 24:
                         if self.get_first_24_bits(ip.ip_addr) not in subnet24.keys():
                             subnet24[self.get_first_24_bits(ip.ip_addr)] = [ip.ip_addr]
                         else:
                             subnet24[self.get_first_24_bits(ip.ip_addr)] += [ip.ip_addr]
-                        break
-
-        #subnets = []
+        self.logger.debug(subnet16)
 
         for network_prefix, ip_list in subnet24.items():
             if len(ip_list) >= 2:
                 subnet = self.calculate_network_details(network_prefix, ip_list, twentyfour=True)
                 for ip in ip_list:
-                    ip.subnet_id = subnet.id
-                    self.session.add(ip)
+                    ip_addr = self.session.query(IPAddr).filter(IPAddr.ip_addr==ip).first()
+                    ip_addr.subnet_id = subnet.id
+                    self.session.add(ip_addr)
                     self.session.commit()
 
         for network_prefix, ip_list in subnet16.items():
             if len(ip_list) >= 2:
                 subnet = self.calculate_network_details(network_prefix, ip_list, sixteen=True)
                 for ip in ip_list:
-                    ip.subnet_id = subnet.id
-                    self.session.add(ip)
+                    ip_addr = self.session.query(IPAddr).filter(IPAddr.ip_addr==ip).first()
+                    ip_addr.subnet_id = subnet.id
+                    self.session.add(ip_addr)
                     self.session.commit()
-
-
-
 
 
     def parse(self):
 
-        self.logger.info('Scrutiny begin scrutinising.')
+        self.logger.info('Scrutiny, begin scrutinising.')
         last_month = datetime.now().replace(day=1) - timedelta(days=1)
         self.logger.info('Timezone setup...')
         displayed_time, time_offset, sys_tz = self.tz_setup()
         self.logger.info('Reading logs...')
         breakin_attempt, banned_ip = self.read_logs(LOG_DIR)
-        #breakin_attempt = {}
-        #breakin_attempt[datetime.now()] = ('124.173.118.167', 'admin')
-        #banned_ip = {}
-        #banned_ip[datetime.now()] = '124.173.118.167'
         unique_ips = set()
         for i in breakin_attempt.values():
             unique_ips.add(i[0])
@@ -489,12 +474,16 @@ class Scrutiny():
         self.logger.info('Finished!')
 
 
-    def perform_tests(self):
+    def setup_test_data(self):
 
-        self.logger.info('Begin tests.')
+        self.logger.info('Setup test data')
         last_month = datetime.now().replace(day=1) - timedelta(days=1)
         #print('Timezone setup...')
         #displayed_time, time_offset, sys_tz = self.tz_setup()
+        self.create_db()
         populate_test_data(self.session)
+        self.calculate_common_subnets()
+
+        #self.delete_db()
 
 

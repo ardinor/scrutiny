@@ -5,8 +5,7 @@ from datetime import datetime
 from sqlalchemy.exc import IntegrityError
 
 from scrutiny import Scrutiny
-from scrutiny.models import IPAddr, BannedIPs, BreakinAttempts, Base, \
-    SubnetDetails
+from scrutiny import IPAddr, BannedIPs, BreakinAttempts, Base, SubnetDetails
 
 class TestCase(unittest.TestCase):
 
@@ -47,6 +46,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(ip_addr.region, region)
         self.assertEqual(ip_addr.country, country)
 
+
     def test_IPAddr_integrity(self):
         test_ip = IPAddr('127.0.0.1')
         test_ip.city_name = 'Darujhistan'
@@ -74,6 +74,7 @@ class TestCase(unittest.TestCase):
         self.session.add(breakin1)
         self.session.commit()
 
+
     def test_BannedIPs(self):
 
         test_ip = IPAddr('127.0.0.1')
@@ -86,6 +87,56 @@ class TestCase(unittest.TestCase):
         ban1.ipaddr = ip_addr.id
         self.session.add(ban1)
         self.session.commit()
+
+    def test_Subnets(self):
+
+        for ip in ['192.168.1.1', '192.168.1.30', '192.168.1.26']:
+            test_ip = IPAddr(ip)
+            self.session.add(test_ip)
+            self.session.commit()
+
+            for i in range(3):
+                attempt_date = datetime.now().replace(minute=i+1)
+                breakin = BreakinAttempts(date=attempt_date, user='test')
+                breakin.ipaddr = test_ip.id
+                self.session.add(breakin)
+                self.session.commit()
+
+        self.scrutiny_instance.calculate_common_subnets()
+        subnet = self.session.query(SubnetDetails)
+        self.assertEqual(subnet.count(), 1)
+        subnet = subnet.first()
+        self.assertEqual(subnet.subnet_id, '192.168.1.0')
+        self.assertEqual(subnet.cidr, '/27')
+        self.assertEqual(subnet.netmask, '255.255.255.224')
+        self.assertEqual(subnet.number_hosts, 30)
+        #self.session.delete(subnet)
+        #self.session.commit()
+
+        for ip in ['172.16.64.1', '172.16.111.30', '172.16.123.26']:
+            test_ip = IPAddr(ip)
+            self.session.add(test_ip)
+            self.session.commit()
+
+            for i in range(3):
+                attempt_date = datetime.now().replace(minute=i+1)
+                breakin = BreakinAttempts(date=attempt_date, user='test')
+                breakin.ipaddr = test_ip.id
+                self.session.add(breakin)
+                self.session.commit()
+
+        self.scrutiny_instance.calculate_common_subnets()
+        subnet = self.session.query(SubnetDetails).filter(SubnetDetails.subnet_id=='172.16.64.0')
+        self.assertEqual(subnet.count(), 1)
+        self.assertIsNotNone(subnet.first)
+        subnet = subnet.first()
+        self.assertEqual(subnet.subnet_id, '172.16.64.0')
+        self.assertEqual(subnet.cidr, '/18')
+        self.assertEqual(subnet.netmask, '255.255.192.0')
+        self.assertEqual(subnet.number_hosts, 16382)
+
+
+
 
 
 

@@ -10,8 +10,8 @@ def populate_test_data(session):
     sample_ip_data = {
         '192.168.1.1': ['McMurdo', 'Antartica'],
         '10.0.0.1': ['Luxembourg City', 'Luxembourg'],
-        '172.16.0.1': ['大阪', '日本'],
-        '172.16.0.56': ['熊本県', '日本'],
+        #'172.16.0.1': ['大阪', '日本'],
+        #'172.16.0.56': ['熊本県', '日本'],
         '163.12.76.193': ['Düsseldorf', 'Germany'],
         '163.12.76.222': ['Düsseldorf', 'Germany'],
         '74.123.51.130': ['Ljubljana', 'Slovenia'],
@@ -20,13 +20,16 @@ def populate_test_data(session):
         '74.123.51.251': ['Ljubljana', 'Slovenia'],
         '69.11.0.0': ['Vienna', 'Austria'],
         '69.11.123.41': ['Vienna', 'Austria'],
+        '172.16.64.1': ['', ''],
+        '172.16.111.30': ['', ''],
+        '172.16.123.26': ['', ''],
     }
 
     sample_attempts = {
         '192.168.1.1': ['admin', 'admin', 'admin', 'admin'],
         '10.0.0.1': ['oracle', 'nagios', 'aaa'],
-        '172.16.0.1': ['aaa', 'aaa', 'aaa'],
-        '172.16.0.56': ['qwe', 'qwe', 'qwe'],
+        #'172.16.0.1': ['aaa', 'aaa', 'aaa'],
+        #'172.16.0.56': ['qwe', 'qwe', 'qwe'],
         '163.12.76.193': ['wertwasdcw', 'Hanz', 'Hanz', 'Prometheus'],
         '163.12.76.222': ['asdqwqwqq', 'bob'],
         '74.123.51.130': ['abebrabr', 'abebrabr', 'aberbaerb', 'aberbaerb', 'aberbaerb'],
@@ -34,11 +37,17 @@ def populate_test_data(session):
         '74.123.51.240': ['abebrabr', 'abebrabr', 'aberbaerb'],
         '74.123.51.251': ['abebrabr', 'abebrabr', 'aberbaerb'],
         '69.11.0.0': ['abebrabr', 'abebrabr', 'aberbaerb'],
-        '69.11.0.0': ['abebrabr', 'abebrabr', 'aberbaerb'],
+        '69.11.123.41': ['abebrabr', 'abebrabr', 'aberbaerb'],
+        '172.16.64.1' : ['asd', 'aw311', '1c8a881'],
+        '172.16.111.30': ['asd', 'aw311', '1c8a881'],
+        '172.16.123.26': ['asd', 'aw311', '1c8a881'],
     }
 
     sample_bans = [
         '192.168.1.1',
+        '172.16.64.1',
+        '172.16.111.30',
+        '172.16.123.26',
     ]
 
     for i, j in sample_ip_data.items():
