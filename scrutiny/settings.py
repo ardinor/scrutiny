@@ -1,3 +1,9 @@
+"""
+The settings file for Scrutiny.
+TO DO: Look at parsing some of these (such as API keys, database credentials)
+       from a config file that is user editable (more easily so than this)
+"""
+
 import os
 
 __version__ = 0.1

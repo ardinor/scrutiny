@@ -2,6 +2,8 @@
 import unittest
 
 from scrutiny import Scrutiny
+from scrutiny.models import IPAddr, BannedIPs, BreakinAttempts, Base, \
+    SubnetDetails
 
 class TestCase(unittest.TestCase):
 
@@ -15,5 +17,5 @@ class TestCase(unittest.TestCase):
 
 
     def testIPAddr(self):
-        pass
+        test_ip = IPAddr()
 

@@ -6,6 +6,9 @@ import json
 import codecs
 import urllib.request, urllib.parse  # urllib.error
 import pytz
+import logging
+import sys
+from socket import gethostname
 from datetime import timedelta, datetime
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
@@ -19,18 +22,6 @@ from scrutiny.settings import API_URL, API_KEY, LOG_DIR, SEARCH_STRING, \
 from scrutiny.tests import populate_test_data, populate_test_tz_data
 
 
-# class SubnetDetails():
-
-#     def __init__(self, subnet_id):
-#         self.subnet_id = subnet_id
-#         self.cidr = None
-#         self.netmask = None
-#         self.number_hosts = None
-
-#     def __repr__(self):
-#         return '<SubNet:{}>'.format(self.subnet_id)
-
-
 class Scrutiny():
 
     def __init__(self):
@@ -38,6 +29,18 @@ class Scrutiny():
         self.base = Base
         self.Session = self.get_session(Base, self.engine)
         self.session = self.Session()
+
+        self.logger = logging.getLogger('scrutiny')
+        formatter = logging.Formatter('%(asctime)s [%(levelname)s] - %(message)s')
+        stream_handler = logging.StreamHandler(stream=sys.stdout)
+        stream_handler.setFormatter(formatter)
+        if DEBUG:
+            stream_handler.setLevel(logging.DEBUG)
+            self.logger.setLevel(logging.DEBUG)
+        else:
+            stream_handler.setLevel(logging.INFO)
+            self.logger.setLevel(logging.INFO)
+        self.logger.addHandler(consoleHandler)
 
 
     def get_engine(self):
@@ -100,7 +103,7 @@ class Scrutiny():
             return return_dict
         else:
             params = {'format': 'json', 'key': API_KEY, 'ip': ip, 'timezone': 'false'}
-            print('Checking IP - {}'.format(ip))
+            self.logger.debug('Checking IP - {}'.format(ip))
             url_params = urllib.parse.urlencode(params)
             url = API_URL + '?' + url_params
             url_obj = urllib.request.urlopen(url)
@@ -126,7 +129,7 @@ class Scrutiny():
             else:
                 return_dict['country'] = '-'
 
-            print('Location - {} {}'.format(return_dict['region'], return_dict['country']))
+            self.logger.debug('Location - {} {}'.format(return_dict['region'], return_dict['country']))
 
             time.sleep(2)
 
@@ -135,15 +138,15 @@ class Scrutiny():
 
     def parse_content(self, content, breakin_attempt, banned_ip, last_month, auth_log):
 
-        for j in content:
+        for line in content:
             if auth_log:
                 # Catch the usual
                 # Jun 10 12:40:05 defestri sshd[11019]: Invalid user admin from 61.174.51.217
-                m = re.search(SEARCH_STRING, j)
+                m = re.search(SEARCH_STRING, line)
                 if m is None:
                     # Also catch these
                     # Jun  8 04:31:10 defestri sshd[5013]: User root from 116.10.191.234 not allowed because none of user's groups are listed in AllowGroups
-                    m = re.search(ROOT_NOT_ALLOWED_SEARCH_STRING, j)
+                    m = re.search(ROOT_NOT_ALLOWED_SEARCH_STRING, line)
                 if m:
                     if m.group('log_date')[:3] == last_month.strftime('%b'):
                         log_date = datetime.strptime(m.group('log_date'), '%b %d %H:%M:%S')
@@ -165,12 +168,12 @@ class Scrutiny():
                         breakin_attempt[log_date] = (m.group('ip_add'), m.group('user'))
 
             else:
-                m = re.search(FAIL2BAN_SEARCH_STRING, j)
+                m = re.search(FAIL2BAN_SEARCH_STRING, line)
                 if m:
-                        b_time = datetime.strptime(m.group('log_date'),
-                                    '%Y-%m-%d %H:%M:%S,%f')
-                        if b_time.month == last_month.month:
-                            banned_ip[b_time] = m.group('ip_add')
+                        ban_time = datetime.strptime(m.group('log_date'),
+                                                     '%Y-%m-%d %H:%M:%S,%f')
+                        if ban_time.month == last_month.month:
+                            banned_ip[ban_time] = m.group('ip_add')
 
 
         return breakin_attempt, banned_ip
@@ -184,18 +187,18 @@ class Scrutiny():
         last_month = datetime.now().replace(day=1) - timedelta(days=1) #.strftime('%b')
         two_month_ago = last_month.replace(day=1) - timedelta(days=1)
 
-        for i in os.listdir(log_dir):
-            if 'auth.log' in i or 'fail2ban.log' in i:
+        for log_file in os.listdir(log_dir):
+            if 'auth.log' in log_file or 'fail2ban.log' in log_file:
                 modified_date = datetime.strptime(time.ctime(os.path.getmtime(
-                                os.path.join(log_dir, i))), "%a %b %d %H:%M:%S %Y")
+                                os.path.join(log_dir, log_file))), "%a %b %d %H:%M:%S %Y")
                 if  modified_date > two_month_ago:
-                    if 'auth.log' in i:
+                    if 'auth.log' in log_file:
                         auth_log = True
                     else:
                         auth_log = False
-                    if os.path.splitext(i)[1] == '.gz':
+                    if os.path.splitext(log_file)[1] == '.gz':
                         # Use zcat?
-                        f = gzip.open(os.path.join(log_dir, i), 'r')
+                        f = gzip.open(os.path.join(log_dir, log_file), 'r')
                         file_content = f.read()  # comes out as bytes
                         try:
                             file_content = file_content.decode("utf-8") # convert to a string
@@ -203,18 +206,18 @@ class Scrutiny():
                             pass # wasn't bytes, ignore
                         split_text = file_content.split('\n')
                         breakin_attempt, banned_ip = self.parse_content(split_text,
-                                                                   breakin_attempt,
-                                                                   banned_ip,
-                                                                   last_month,
-                                                                   auth_log)
+                                                                        breakin_attempt,
+                                                                        banned_ip,
+                                                                        last_month,
+                                                                        auth_log)
 
                     else:
-                        with open(os.path.join(log_dir, i), 'r') as f:
+                        with open(os.path.join(log_dir, log_file), 'r') as f:
                             breakin_attempt, banned_ip = self.parse_content(f,
-                                                                       breakin_attempt,
-                                                                       banned_ip,
-                                                                       last_month,
-                                                                       auth_log)
+                                                                            breakin_attempt,
+                                                                            banned_ip,
+                                                                            last_month,
+                                                                            auth_log)
 
         return breakin_attempt, banned_ip
 
@@ -284,7 +287,7 @@ class Scrutiny():
             # join(IPAddr)
             except AttributeError:
                 # Make a new type of list inheriting from the builtin list
-                # this makes the function below work
+                # this makes the below check (ban.count() == 0) work
                 # This is pretty silly but sometimes doing things the easy way
                 # is for chumps
                 class nList(list):
@@ -464,11 +467,11 @@ class Scrutiny():
 
     def parse(self):
 
-        print('Begin.')
+        self.logger.info('Scrutiny begin scrutinising.')
         last_month = datetime.now().replace(day=1) - timedelta(days=1)
-        print('Timezone setup...')
+        self.logger.info('Timezone setup...')
         displayed_time, time_offset, sys_tz = self.tz_setup()
-        print('Reading logs...')
+        self.logger.info('Reading logs...')
         breakin_attempt, banned_ip = self.read_logs(LOG_DIR)
         #breakin_attempt = {}
         #breakin_attempt[datetime.now()] = ('124.173.118.167', 'admin')
@@ -484,15 +487,15 @@ class Scrutiny():
             # be a good citizen and only hit the site every two seconds
          #   time.sleep(2)
 
-        print('Inserting results into database...')
+        self.logger.info('Inserting results into database...')
         self.insert_into_db(unique_ips, breakin_attempt, banned_ip)
 
-        print('Finished!')
+        self.logger.info('Finished!')
 
 
     def perform_tests(self):
 
-        print('Begin tests.')
+        self.logger.info('Begin tests.')
         last_month = datetime.now().replace(day=1) - timedelta(days=1)
         #print('Timezone setup...')
         #displayed_time, time_offset, sys_tz = self.tz_setup()
