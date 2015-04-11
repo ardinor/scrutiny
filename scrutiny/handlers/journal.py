@@ -24,11 +24,11 @@ class JournalReader():
             entry_time = entry['__REALTIME_TIMESTAMP']
             match = re.match(INVALID_USER_MATCH, entry["MESSAGE"])
             if match:
-                ip_addr, user = m.group('ip_addr'), m.group('user')
+                matches[entry_time] = (m.group('ip_addr'), m.group('user'))
 
             match = re.match(USER_NOT_ALLOWED, entry["MESSAGE"])
             if match:
-                 ip_addr, user = m.group('ip_addr'), m.group('user')
+                matches[entry_time] = (m.group('ip_addr'), m.group('user'))
 
 
 # Sample data from journalctl
