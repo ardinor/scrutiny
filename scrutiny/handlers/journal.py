@@ -1,30 +1,34 @@
 import re
-import pyjournalctl
+from systemd import journal
 
-invalid_user_match = "Invalid user (?P<user>.*) from (?P<ip_addr>\d{{1,3}}\.\d{{1,3}}\.\d{{1,3}}\.\d{{1,3}})"
-user_not_allowed = "User (?P<user>.*) from (?P<ip_addr>\d{{1,3}}\.\d{{1,3}}\.\d{{1,3}}\.\d{{1,3}}) not allowed"
+SSHD_UNIT_NAME = "sshd.service"
 
-reader = pyjournalctl.Journalctl()
-reader.this_boot()
-reader.add_match("_SYSTEMD_UNIT", "sshd.service")
+INVALID_USER_MATCH = "Invalid user (?P<user>.*) from (?P<ip_addr>\d{{1,3}}\.\d{{1,3}}\.\d{{1,3}}\.\d{{1,3}})"
+USER_NOT_ALLOWED = "User (?P<user>.*) from (?P<ip_addr>\d{{1,3}}\.\d{{1,3}}\.\d{{1,3}}\.\d{{1,3}}) not allowed"
 
-entry = journal.get_next()
 
-while entry:
+class JournalReader():
 
-    entry_time = entry['__REALTIME_TIMESTAMP']
-    match = re.match(invalid_user_match, entry["MESSAGE"])
-    if match:
-        ip_addr, user = m.group('ip_addr'), m.group('user')
+    def __init__(self):
+        self.reader = journal.Reader()
+        #self.reader.this_boot()
 
-    match = re.match(user_not_allowed, entry["MESSAGE"])
-    if match:
-         ip_addr, user = m.group('ip_addr'), m.group('user')
+    def set_unit(self, unit_name=SSHD_UNIT_NAME):
+        self.reader.add_match(_SYSTEMD_UNIT=unit_name)
 
-    # Add to results
+    def get_matches(self):
 
-    entry = reader.get_next()
+        matches = {}
 
+        for entry in self.reader():
+            entry_time = entry['__REALTIME_TIMESTAMP']
+            match = re.match(INVALID_USER_MATCH, entry["MESSAGE"])
+            if match:
+                ip_addr, user = m.group('ip_addr'), m.group('user')
+
+            match = re.match(USER_NOT_ALLOWED, entry["MESSAGE"])
+            if match:
+                 ip_addr, user = m.group('ip_addr'), m.group('user')
 
 
 # Sample data from journalctl

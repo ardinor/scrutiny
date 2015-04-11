@@ -1,2 +1,1 @@
 SQLAlchemy==0.9.9
-pyjournalctl==0.7.0
