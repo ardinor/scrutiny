@@ -17,18 +17,21 @@ class JournalReader():
         self.reader.add_match(_SYSTEMD_UNIT=unit_name)
 
     def get_matches(self):
-
         matches = {}
 
         for entry in self.reader():
             entry_time = entry['__REALTIME_TIMESTAMP']
             match = re.match(INVALID_USER_MATCH, entry["MESSAGE"])
             if match:
+                # Need to check to ensure there isn't an entry with the
+                # exact same time
                 matches[entry_time] = (m.group('ip_addr'), m.group('user'))
 
             match = re.match(USER_NOT_ALLOWED, entry["MESSAGE"])
             if match:
                 matches[entry_time] = (m.group('ip_addr'), m.group('user'))
+
+        return matches
 
 
 # Sample data from journalctl
