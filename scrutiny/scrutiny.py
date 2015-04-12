@@ -8,6 +8,7 @@ import urllib.request, urllib.parse  # urllib.error
 import pytz
 import logging
 import sys
+import platform
 from socket import gethostname
 from datetime import timedelta, datetime
 from sqlalchemy import create_engine, func
@@ -28,6 +29,7 @@ class Scrutiny():
         self.engine = self.get_engine()
         self.base = Base
         self.session = self.get_session(Base, self.engine)
+        self.get_distro()
 
         self.logger = logging.getLogger('scrutiny')
         formatter = logging.Formatter('%(asctime)s [%(levelname)s] - %(message)s')
@@ -54,6 +56,19 @@ class Scrutiny():
         return Session()
 
 
+    def get_distro(self):
+        # Maybe instead of this, try getting what capabilities we have
+        # i.e., can we use journalctl? If not fall back to trying to find
+        # the log file
+        self.distro = None
+        self.distro_version = None
+
+        distro = platform.linux_distribution()
+        if distro and len(distro) >= 2:
+            self.distro = distro[0]
+            self.distro_version = distro[1]
+
+
     def create_db(self):
         self.base.metadata.create_all(self.engine)
 
@@ -74,8 +89,13 @@ class Scrutiny():
             time_offset = '+{}'.format(time_offset)
 
         #Get zone info (aka just set the system time to UTC already)
-        #a = os.popen("cat /etc/sysconfig/clock | grep ZONE")  # RHEL
-        a = os.popen("cat /etc/timezone")   # Debian
+        # need to check if the logs are in utc or not... somehow...
+        #a = os.popen("cat /etc/sysconfig/clock | grep ZONE")  # RHEL/CentOS 6.5?
+        if self.distro == 'Fedora':
+            a = os.popen('timedatectl | grep "Time zone')
+            # Time zone: Australia/Brisbane (AEST, +1000)
+        elif self.distro == 'Debian':
+            a = os.popen("cat /etc/timezone")   # Debian
         cat_res = a.read()
         if cat_res:
             #cat_res = cat_res.replace('ZONE="', '')  # Debian doesn't need this
@@ -130,9 +150,6 @@ class Scrutiny():
             time.sleep(2)
 
         return return_dict
-
-
-
 
 
     def create_new_ipaddr(self, ip):
